@@ -1862,7 +1862,7 @@ helps['image template run'] = """
         az image template show -n mytemplate -g my-group
 """
 
-helps['image template show'] = """
+helps['image template show-runs'] = """
     type: command
     short-summary: Show an image builder template's run outputs.
     examples:
@@ -1873,7 +1873,7 @@ helps['image template show'] = """
         az image template wait -n mytemplate -g aibmdi \\
             --custom "lastRunStatus.runState!='running'"
         
-        az image template show -n mytemplate -g my-group
+        az image template show-runs -n mytemplate -g my-group
 """
 
 helps['image template create'] = """

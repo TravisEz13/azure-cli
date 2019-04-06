@@ -169,7 +169,7 @@ def load_command_table(self, _):
         # g.generic_update_command('update', 'list_image_templates') todo when supported by service
         g.wait_command('wait')
         g.command('run', 'run', supports_no_wait=True)
-        g.custom_command('show', 'show_build_output')
+        g.custom_command('show-runs', 'show_build_output')
 
     with self.command_group('image template customizer', image_builder_image_templates_sdk, custom_command_type=image_builder_custom) as g:
         g.custom_command('add', 'add_template_customizer', validator=process_img_tmpl_customizer_add_namespace)

@@ -238,11 +238,11 @@ def process_image_template_create_namespace(cmd, namespace):
 
 def process_img_tmpl_customizer_add_namespace(cmd, namespace):
 
-    if namespace.type.lower() in [ScriptType.SHELL.value.lower(), ScriptType.POWERSHELL.value.lower()]:
+    if namespace.customizer_type.lower() in [ScriptType.SHELL.value.lower(), ScriptType.POWERSHELL.value.lower()]:
         if not namespace.script:
             raise CLIError("A script must be provided if type is one of: {} {}".format(ScriptType.SHELL.value, ScriptType.POWERSHELL.value))
 
-    elif namespace.type.lower() == ScriptType.WINDOWS_RESTART.lower():
+    elif namespace.customizer_type.lower() == ScriptType.WINDOWS_RESTART.value.lower():
         if namespace.script:
             logger.warning("Ignoring the supplied script as scripts are not used for Windows Restart.")
 
@@ -348,7 +348,7 @@ def list_image_templates(client, resource_group_name=None):
 def show_build_output(client, resource_group_name, image_template_name, output_name=None):
     if output_name:
         return client.virtual_machine_image_templates.get_run_output(resource_group_name, image_template_name, output_name)
-    return client.virtual_machine_image_templates.get_run_outputs(resource_group_name, image_template_name)
+    return client.virtual_machine_image_templates.list_run_outputs(resource_group_name, image_template_name)
 
 # TODO: add when new whl file generated. support tags for create and here.
 def add_template_output(cmd, client, resource_group_name, image_template_name, gallery_name=None, location=None,
@@ -413,14 +413,23 @@ def clear_template_output(cmd, client, resource_group_name, image_template_name)
 
 
 def _update_image_template(cmd, client, resource_group_name, image_template_name, new_template, old_template):
+    if new_template.distribute is None:
+        new_template.distribute = []
+
+    if new_template.customize is None:
+        new_template.customize = []
+
+
     LongRunningOperation(cmd.cli_ctx)(client.virtual_machine_image_templates.delete(resource_group_name, image_template_name))
     try:
         return LongRunningOperation(cmd.cli_ctx)(client.virtual_machine_image_templates.create_or_update(new_template, resource_group_name, image_template_name))
     except (ClientException) as e:
-        logger.warning("Failed to create updated template.\nError: %s.\nRe-creating old template", e)
+        logger.error("Failed to create updated template.\nError: %s.\nRe-creating old template", e)
         old_template.distribute = old_template.distribute or []
         old_template.customize = old_template.customize or []
-        return LongRunningOperation(cmd.cli_ctx)(client.virtual_machine_image_templates.create_or_update(old_template, resource_group_name, image_template_name))
+        LongRunningOperation(cmd.cli_ctx)(client.virtual_machine_image_templates.create_or_update(old_template, resource_group_name, image_template_name))
+        logger.warning("Template {} was created.".format(old_template.id))
+        raise CLIError("Update Operation failed.")
 
 # todo: prevent customizers with the same name
 
@@ -452,7 +461,7 @@ def add_template_customizer(cmd, client, resource_group_name, image_template_nam
                                                            restart_timeout=restart_timeout)
 
     if not new_customizer:
-        raise CLIError("Cannot detemine customizer from type {}.".format(customizer_type))
+        raise CLIError("Cannot determine customizer from type {}.".format(customizer_type))
 
     existing_image_template.customize.append(new_customizer)
     # Work around of not having update method. delete then create.
